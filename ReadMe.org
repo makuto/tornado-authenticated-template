@@ -1,0 +1,68 @@
+* Tornado Authenticated Server
+
+A template for adding login authenticated users.
+
+For personal use only, as there is no support for creating new accounts without direct server access.
+
+*I'm no expert, so use and trust at your own risk!* This security is essentially a cheap padlock which keeps honest people honest and undetermined intruders out.
+
+** Directions
+
+*** 1. Clone this repository
+
+#+BEGIN_SRC sh
+git clone https://github.com/makuto/tornado-authenticated-template
+#+END_SRC
+
+*** 2. Install python dependencies
+
+The following dependencies are required:
+
+#+BEGIN_SRC sh
+pip install tornado passlib bcrypt argon2_cffi
+#+END_SRC
+
+You'll want to use Python 3, which for your environment may require you to specify ~pip3~ instead of just ~pip~.
+
+*** 3. Generate SSL keys
+
+#+BEGIN_SRC sh
+cd tornado-authenticated-template/
+./Generate_Certificates.sh
+#+END_SRC
+
+This step is only required if you want to use SSL, which ensures you have an encrypted connection to the server.
+
+*** 4. Run the server
+
+#+BEGIN_SRC sh
+python3 AuthenticatedServer.py
+#+END_SRC
+
+*** 5. Test it
+
+Open [[https://localhost:8888][localhost:8888]] in any web browser
+
+If your web browser complains about the certificate, you may have to click ~Advanced~ and add the certificate as trustworthy, because you've signed the certificate and trust yourself :). If you want to get rid of this, you'll need to get a signing authority like ~LetsEncrypt~ to generate your certificate.
+
+** Creating accounts
+
+*** Create your account(s)
+
+Rather than have a web-based registration process, you'll create each account manually. This is because this service is only designed for private use.
+
+You'll use ~PasswordManager.py~ to generate a file ~passwords.txt~ with your hashed (and salted) passwords:
+
+#+BEGIN_SRC sh
+python3 PasswordManager.py "Your Password Here"
+#+END_SRC
+
+You can create multiple valid passwords, if desired.
+
+If you want to reset all passwords, simply delete ~passwords.txt~.
+
+*** Restart your server
+
+You should now see a Login page before being able to access any content.
+
+Note that all login cookies will be invalidated each time you restart the server.
