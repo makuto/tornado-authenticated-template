@@ -48,18 +48,19 @@ If your web browser complains about the certificate, you may have to click ~Adva
 ** Creating accounts
 
 *** Create your account(s)
+**** Creating accounts from the web interface
+When you first run the server, the Create Account interface will automatically show up when visiting [[https://localhost:8888][localhost:8888]].
 
-Rather than have a web-based registration process, you'll create each account manually. This is because this service is only designed for private use.
+Note that this will be the only account that can be created through the web interface. If you want to let others create accounts, open AuthenticatedServer.py and set ~enable_subsequent_account_creation = True~. Then, anyone may visit [[https://localhost:8888/createNewAccount][localhost:8888/createNewAccount]] to create a new account.
+**** Creating accounts from the command line
 
-You'll use ~PasswordManager.py~ to generate a file ~passwords.txt~ with your hashed (and salted) passwords:
+You can use ~PasswordManager.py~ to edit file ~accounts.json~ with hashed (and salted) passwords:
 
 #+BEGIN_SRC sh
-python3 PasswordManager.py "Your Password Here"
+python3 PasswordManager.py
 #+END_SRC
 
-You can create multiple valid passwords, if desired.
-
-If you want to reset all passwords, simply delete ~passwords.txt~.
+If you want to reset all accounts, simply delete ~accounts.json~.
 
 *** Restart your server
 

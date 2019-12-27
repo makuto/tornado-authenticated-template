@@ -13,6 +13,12 @@ import random
 #enable_authentication = False
 enable_authentication = True
 
+# Allow anyone to create an account even after the first account has been created
+# This is a security vulnerability that should be considered before being enabled.
+# Do you want anyone to be able to use the service provided by your server?
+enable_subsequent_account_creation = False
+# enable_subsequent_account_creation = True
+
 # If "next" isn't specified from login, redirect here after login instead
 landingPage = "/"
 
@@ -39,21 +45,40 @@ def login_get_current_user(handler):
 class AuthHandler(tornado.web.RequestHandler):
     def get_current_user(self):
         return login_get_current_user(self)
+
+class LoginNewAccountHandler(AuthHandler):
+    def get(self):
+        if not enable_subsequent_account_creation:
+            self.redirect("/login")
+        else:
+            # New password setup
+            self.render("templates/LoginCreate.html",
+                        next=self.get_argument("next", landingPage),
+                        xsrf_form_html=self.xsrf_form_html())
     
 class LoginHandler(AuthHandler):
     def get(self):
         if not enable_authentication:
             self.redirect("/")
         else:
-            self.render("templates/Login.html",
-                        next=self.get_argument("next", landingPage),
-                        xsrf_form_html=self.xsrf_form_html())
+            if PasswordManager.havePasswordsBeenSet():
+                self.render("templates/Login.html",
+                            next=self.get_argument("next", landingPage),
+                            xsrf_form_html=self.xsrf_form_html(),
+                            create_accounts_html = ("" if not enable_subsequent_account_creation
+                                                    else '<p>Go <a href="/createNewAccount">here</a> to create an account.</p>'))
+            else:
+                # New password setup
+                self.render("templates/LoginCreate.html",
+                            next=self.get_argument("next", landingPage),
+                            xsrf_form_html=self.xsrf_form_html())
 
     def post(self):
         global authenticated_users
         # Test password
         print("Attempting to authorize user {}...".format(self.get_argument("name")))
-        if enable_authentication and PasswordManager.verify(self.get_argument("password")):
+        if (enable_authentication
+            and PasswordManager.verify(self.get_argument("name"), self.get_argument("password"))):
             # Generate new authenticated user session
             randomGenerator = random.SystemRandom()
             cookieSecret = str(randomGenerator.getrandbits(128))
@@ -69,9 +94,10 @@ class LoginHandler(AuthHandler):
             # Let them in
             self.redirect(self.get_argument("next", landingPage))
         else:
-            print("Refused user {} (password doesn't match any in database)".format(self.get_argument("name")))
+            print("Refused user {} (password doesn't match any in database)"
+                  .format(self.get_argument("name")))
             self.redirect("/login")
-            
+
 class LogoutHandler(AuthHandler):
     @tornado.web.authenticated
     def get(self):
@@ -85,6 +111,28 @@ class LogoutHandler(AuthHandler):
         else:
             self.redirect("/")
 
+class CreateAccountHandler(AuthHandler):
+    def get(self):
+        pass
+
+    def post(self):
+        if not enable_authentication:
+            self.redirect("/")
+        else:
+            print("Attempting to set password")
+            if not enable_subsequent_account_creation and PasswordManager.havePasswordsBeenSet():
+                print("Rejected: Accounts cannot be created via the server if one already has been made.")
+            elif self.get_argument("password") != self.get_argument("password_verify"):
+                print("Rejected: password doesn't match verify field!")
+            else:
+                result = PasswordManager.createAccount(self.get_argument("name"),
+                                                       self.get_argument("password"))
+                if not result[0]:
+                    print("Failed: {}".format(result[1]))
+                print("Success: {}".format(result[1]))
+
+            self.redirect("/login")
+
 class AuthedStaticHandler(tornado.web.StaticFileHandler):
     def get_current_user(self):
         return login_get_current_user(self)
@@ -96,6 +144,8 @@ class AuthedStaticHandler(tornado.web.StaticFileHandler):
 class HomeHandler(AuthHandler):
     @tornado.web.authenticated
     def get(self):
+        # Replace with your desired behavior, e.g. 
+        # self.render('webInterface/index.html')
         self.write('You are logged in!')
 
 class ExampleWebSocket(tornado.websocket.WebSocketHandler):
@@ -134,7 +184,9 @@ def make_app():
         # Login
         (r'/login', LoginHandler),
         (r'/logout', LogoutHandler),
-
+        (r'/createNewAccount', LoginNewAccountHandler),
+        (r'/finishCreateAccount', CreateAccountHandler),
+        
         # (r'/ExampleWebSocket', ExampleWebSocket),
 
         # Static files
